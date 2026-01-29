@@ -1,20 +1,83 @@
 # Text-Guided-Image-Generation-CFM
 
-This project tackles text-guided image editing — generating an image that preserves the structure of the input while aligning with a given text prompt. The task combines elements of image-to-image translation and text-to-image synthesis.
+This repo implements a **text-to-image (T2I)** generation pipeline based on **Conditional Flow Matching (CFM)**.
 
-I adopt a Conditional Flow Matching (CFM) model, where the text prompt is embedded via pretrained CLIP (openAIclip-vit-base-patch16). A pretrained VAE (stabilityai/sdxl-vae) is also used to compress images into a compact latent space, making generation more efficient and stable. To further improve controllability, we apply Classifier-Free Guidance (CFG), enabling stronger adherence to the text prompt without needing extra classifiers.
+- **Backbone**: **UNet** conditioned on text embeddings  
+- **Text encoder**: **CLIP** (`openai/clip-vit-base-patch16`) via `CLIPTokenizer` + `CLIPTextModel`  
+- **Logging**: **Weights & Biases (wandb)** (metrics + sample grids)
 
-## Result
+> Note: CLIP weights/tokenizer are downloaded on first use. Make sure your environment has network access (proxy/mirror if needed).
 
-| Before and After                                                           |
-|--------------------------------------------------------------------------|
-| <img src="example/guided_dog.png" alt="Before and After" width="300" style="border:1px solid #ccc; border-radius:8px;" /> ||--------------------------------------------------------------------------|
-| <img src="example/guided_cat.png" alt="Before and After" width="300" style="border:1px solid #ccc; border-radius:8px;" /> |
+---
 
-| Noise to Image                                                             |
-|--------------------------------------------------------------------------|
-| <img src="example/sample_11.gif" alt="Noise to Image" width="300" style="border:1px solid #ccc; border-radius:8px;" /> |
+## Pipeline
 
-| Reconstructing Progress                                                     |
-|----------------------------------------------------------------------------|
-| <img src="example/guided_dog_progress.png" alt="Reconstructing Progress" width="300" style="border:1px solid #ccc; border-radius:8px;" /> |
+1. Prepare paired **image + text** data (keep the dataset format below).
+2. Run preprocessing scripts under `data_preprocess/` **in order**.
+3. Run `t2i_flow.py` to start training.
+4. Training logs and samples will be synced to **wandb**.
+
+---
+
+## Environment
+
+Coming soon.
+
+---
+
+## Dataset Format
+
+Keep your dataset in the following structure:
+
+```text
+/data/memsdata/
+  train/
+    jsonl/
+      labels_n1.jsonl
+    png/
+      1_00001.png
+      1_00002.png
+      ...
+```
+The JSONL file contains one record per line:
+```text
+{"image_file_name":"1_00001.png","text_context":"drive_freq:..."}
+```
+
+---
+
+## Data Preprocess
+Preprocessing scripts are located in:
+```text
+data_preprocess/
+  convert_ds.py
+  convert_128.py
+  convert_text_emb.py
+```
+
+and run command
+```text
+cd data_preprocess
+python convert_ds.py
+python convert_text_emb.py
+python convert_128.py
+```
+Output datasets are saved on disk and will be loaded by the training script.
+Example output name: mems_dataset_embed_128
+
+---
+
+## Train & Evaluaion
+you can modify the interval in scripts to control the frequency of eval during training the model
+```text
+python t2i_flow.py 
+```
+
+
+
+
+
+
+
+
+

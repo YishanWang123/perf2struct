@@ -1,52 +1,36 @@
+import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision import transforms
 
-class CFMDataset(Dataset):
-    def __init__(self, dataset, text_encoder, tokenizer, device):
+class CFMEmbedDataset(Dataset):
+    def __init__(self, dataset, img_size=128, text_key="caption", embed_key="caption_embedding"):
         self.dataset = dataset
-        self.transform = transforms.Compose(
-            [transforms.Resize((64, 64)), transforms.ToTensor()]
-            
-        )
-        self.text_encoder = text_encoder
-        self.tokenizer = tokenizer
-        self.device = device
-        self.images = dataset["image"]
-        self.captions = dataset["text"]
-        self.cache = {}
-
-    def get_embed(self, caption):
-        inputs = self.tokenizer(
-            caption,
-            truncation=True,
-            padding=True,
-            return_tensors="pt"
-        ).to(self.device)
-        self.text_encoder.eval()
-        with torch.no_grad():
-            # Use mean pooling instead of just the first token
-            text_features = self.text_encoder(**inputs).last_hidden_state
-            # Mean pooling
-            text_features = text_features.mean(dim=1)
-        return text_features.squeeze(0)
+        self.text_key = text_key
+        self.embed_key = embed_key
+        self.transform = transforms.Compose([
+            # transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+        ])
 
     def __len__(self):
-        return len(self.images)
+        return len(self.dataset)
 
     def __getitem__(self, idx):
-        if idx in self.cache:
-            return self.cache[idx]
+        ex = self.dataset[idx]
 
-        transformed_image = self.transform(self.images[idx])
-        caption = self.captions[idx]
-        caption_embedding = self.get_embed(caption)
+        img = ex["image"].convert("RGB")
+        caption = ex[self.text_key] if self.text_key in ex else ex.get("text", "")
 
-        item = {
-            "image": transformed_image,
+        emb_raw = ex[self.embed_key]
+        # HF datasets often returns list for Array features
+        if isinstance(emb_raw, np.ndarray):
+            emb = torch.from_numpy(emb_raw).float()
+        else:
+            emb = torch.tensor(emb_raw, dtype=torch.float32)
+
+        return {
+            "image": self.transform(img),
             "caption": caption,
-            "caption_embedding": caption_embedding,
+            "caption_embedding": emb,  # [512] float32
         }
-
-        self.cache[idx] = item
-        return item

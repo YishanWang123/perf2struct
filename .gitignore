@@ -1,2 +1,4 @@
 /dataset
 /model
+/wandb
+/__pycache__

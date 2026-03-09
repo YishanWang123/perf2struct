@@ -59,3 +59,43 @@ class UNetModelWithTextEmbedding(UNetModel):
             h = module(h, emb)
         h = h.type(x.dtype)
         return self.out(h)
+
+
+class UNetModelWithFiLM(UNetModel):
+    """用 MLP 将 feature 转为 embedding，再以 FiLM (scale+shift) 方式注入 UNet"""
+    def __init__(self, dim, num_channels, num_res_blocks, feature_dim, mlp_hidden=128, *args, **kwargs):
+        super().__init__(dim, num_channels, num_res_blocks, *args, **kwargs)
+        emb_dim = num_channels * 4
+        self.mlp = nn.Sequential(
+            nn.Linear(feature_dim, mlp_hidden),
+            nn.SiLU(),
+            nn.Linear(mlp_hidden, mlp_hidden),
+            nn.SiLU(),
+            nn.Linear(mlp_hidden, emb_dim * 2),  # gamma, beta
+        )
+
+    def forward(self, t, x, features=None):
+        timesteps = t
+        while timesteps.dim() > 1:
+            timesteps = timesteps[:, 0]
+        if timesteps.dim() == 0:
+            timesteps = timesteps.repeat(x.shape[0])
+
+        emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
+
+        if features is not None:
+            film = self.mlp(features)  # [B, emb_dim*2]
+            gamma, beta = film.chunk(2, dim=1)
+            emb = emb * (1 + gamma) + beta  # FiLM
+
+        h = x.type(self.dtype)
+        hs = []
+        for module in self.input_blocks:
+            h = module(h, emb)
+            hs.append(h)
+        h = self.middle_block(h, emb)
+        for module in self.output_blocks:
+            h = torch.cat([h, hs.pop()], dim=1)
+            h = module(h, emb)
+        h = h.type(x.dtype)
+        return self.out(h)

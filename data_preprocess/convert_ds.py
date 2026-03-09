@@ -1,8 +1,8 @@
 import os
 from datasets import load_dataset, Image
 
-jsonl_path = "/data/memsdata/train/jsonl/labels_n1.jsonl"
-png_dir = "/data/memsdata/train/png"
+jsonl_path = "/root/memsdata/train/jsonl/labels_n1.jsonl"
+png_dir = "/root/memsdata/train/png"
 
 # 读 jsonl
 ds = load_dataset("json", data_files=jsonl_path, split="train")

@@ -23,6 +23,8 @@ DATASET_PATH = "/root/mems_dataset_feature_64"
 
 # 随机种子
 SEED = 42
+CKPT_DIR = "./checkpoints"
+os.makedirs(CKPT_DIR, exist_ok=True)
 
 
 def set_seed(seed=SEED):
@@ -62,21 +64,21 @@ model = UNetModelWithFiLM(
 ).to(device)
 
 optimizer = torch.optim.AdamW(model.parameters())
-n_epochs = 500
+n_epochs = 900
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
 
 EULER_STEPS = 20
-sample_every_n_epochs = 1
+sample_every_n_epochs = 30
 
 # 采样用 feature：填写 dataset 中的索引
 # 从数据集中取这些 index 的 feature 做采样
 # 若需从原始参数构造 feature，可: from data_preprocess.pipeline_feature import features_to_vector
 SAMPLE_FEATURE_INDICES = [0, 100, 500, 800]
 
-use_wandb = True
+use_wandb = False
 
 if use_wandb:
-    wandb.init(project="cfm-image-generation", name="feature-film-64-test",
+    wandb.init(project="cfm-image-generation", name="feature-film-64-ck",
                config={"epochs": n_epochs, "batch_size": 64, "feature_dim": FEATURE_DIM})
 else:
     class DummyWandb:
@@ -135,39 +137,50 @@ def sample_and_log(epoch, features_batch, n_samples_per_feat=1, tag="sample"):
         os.remove(tmp_path)
 
 
-# 训练循环
-for epoch in tqdm(range(n_epochs)):
-    losses = []
-    for batch in train_loader:
-        optimizer.zero_grad()
-        x1 = batch["image"].to(device, non_blocking=True)
-        features = batch["feature"].to(device, non_blocking=True)
+# 训练循环（仅直接运行时执行，import 时跳过）
+if __name__ == "__main__":
+    for epoch in tqdm(range(n_epochs)):
+        losses = []
+        for batch in train_loader:
+            optimizer.zero_grad()
+            x1 = batch["image"].to(device, non_blocking=True)
+            features = batch["feature"].to(device, non_blocking=True)
 
-        x0 = torch.randn_like(x1, device=device)
-        t = torch.rand(x1.shape[0], 1, 1, 1, device=device)
+            x0 = torch.randn_like(x1, device=device)
+            t = torch.rand(x1.shape[0], 1, 1, 1, device=device)
 
-        xt = t * x1 + (1 - t) * x0
-        ut = x1 - x0
-        t = t.squeeze()
+            xt = t * x1 + (1 - t) * x0
+            ut = x1 - x0
+            t = t.squeeze()
 
-        vt = model(t, xt, features=features)
-        loss = torch.mean(((vt - ut) ** 2))
+            vt = model(t, xt, features=features)
+            loss = torch.mean(((vt - ut) ** 2))
 
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        optimizer.step()
-        losses.append(loss.item())
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
+            losses.append(loss.item())
 
-    scheduler.step()
-    avg_loss = sum(losses) / len(losses)
-    wandb.log({"train_loss": avg_loss, "epoch": epoch})
+        scheduler.step()
+        avg_loss = sum(losses) / len(losses)
+        wandb.log({"train_loss": avg_loss, "epoch": epoch})
 
-    if (epoch + 1) % 10 == 0:
-        print(f"Epoch [{epoch + 1}/{n_epochs}], Loss: {avg_loss:.4f}")
+        if (epoch + 1) % 10 == 0:
+            print(f"Epoch [{epoch + 1}/{n_epochs}], Loss: {avg_loss:.4f}")
 
-    if (epoch + 1) % sample_every_n_epochs == 0:
-        indices = [i for i in SAMPLE_FEATURE_INDICES if i < len(train_ds)]
-        if indices:
-            feats = train_ds.features[indices]
-            feats_t = torch.from_numpy(feats).float()
-            sample_and_log(epoch, feats_t, n_samples_per_feat=1, tag="unseen")
+        if (epoch + 1) % sample_every_n_epochs == 0:
+            indices = [i for i in SAMPLE_FEATURE_INDICES if i < len(train_ds)]
+            if indices:
+                feats = train_ds.features[indices]
+                feats_t = torch.from_numpy(feats).float()
+                sample_and_log(epoch, feats_t, n_samples_per_feat=1, tag="unseen")
+
+                ckpt_path = os.path.join(CKPT_DIR, f"epoch_{epoch+1:04d}.pt")
+                torch.save({
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "loss": avg_loss,
+                    "feature_dim": FEATURE_DIM,
+                }, ckpt_path)

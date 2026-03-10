@@ -2,3 +2,5 @@
 /model
 /wandb
 /__pycache__
+checkpoints/
+generated_*/

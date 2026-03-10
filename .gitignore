@@ -4,3 +4,7 @@
 /__pycache__
 checkpoints/
 generated_*/
+grid*.png
+generated_*.zip
+grid_0_199.png
+grid_0_99.png

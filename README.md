@@ -1,83 +1,62 @@
-# Text-Guided-Image-Generation-CFM
+# Perf2Struct
 
-This repo implements a **text-to-image (T2I)** generation pipeline based on **Conditional Flow Matching (CFM)**.
+**Performance-Conditioned Structural Generation for Fork-Shaped Beam Design**
 
-- **Backbone**: **UNet** conditioned on text embeddings  
-- **Text encoder**: **CLIP** (`openai/clip-vit-base-patch16`) via `CLIPTokenizer` + `CLIPTextModel`  
-- **Logging**: **Weights & Biases (wandb)** (metrics + sample grids)
+Perf2Struct is a generative inverse design project for fork-shaped beam structures.  
+The goal is to generate structural geometries from target mechanical performance indicators, and then validate the generated results through simulation-oriented engineering post-processing.
 
-> Note: CLIP weights/tokenizer are downloaded on first use. Make sure your environment has network access (proxy/mirror if needed).
+## Project Overview
 
----
+![Data pipeline](assets/asset.jpg)
 
-## Pipeline
+*Figure 1. Overall data pipeline.*
 
-1. Prepare paired **image + text** data (keep the dataset format below).
-2. Run preprocessing scripts under `data_preprocess/` **in order**.
-3. Run `t2i_flow.py` to start training.
-4. Training logs and samples will be synced to **wandb**.
+![Model](assets/assets1.jpg)
 
----
+*Figure 2. Model structure.*
 
-## Environment
+## Overview
 
-Coming soon.
+This project explores how to map target structural properties to 2D fork-shaped beam geometries using conditional generative modeling.
 
----
+The current workflow includes:
 
-## Dataset Format
+1. performance-conditioned structure generation
+2. image-based geometry output
+3. contour extraction and geometric fitting
+4. COMSOL-based reconstruction and validation
 
-Keep your dataset in the following structure:
+## Target Conditions
 
-```text
-/data/memsdata/
-  train/
-    jsonl/
-      labels_n1.jsonl
-    png/
-      1_00001.png
-      1_00002.png
-      ...
-```
-The JSONL file contains one record per line:
-```text
-{"image_file_name":"1_00001.png","text_context":"drive_freq:..."}
-```
-
----
-
-## Data Preprocess
-Preprocessing scripts are located in:
-```text
-data_preprocess/
-  convert_ds.py
-  convert_128.py
-  convert_text_emb.py
-```
-
-and run command
-```text
-cd data_preprocess
-python convert_ds.py
-python convert_text_emb.py
-python convert_128.py
-```
-Output datasets are saved on disk and will be loaded by the training script.
-Example output name: mems_dataset_embed_128
-
----
-
-## Train & Evaluaion
-you can modify the interval in scripts to control the frequency of eval during training the model
-```text
-python t2i_flow.py 
-```
+The model is designed to condition on mechanical performance indicators such as:
+- drive_frequency
+- split
+- parasitic
+- x stiffness
+- nonlinearity
 
 
+## Project Goal
 
+The main objective is not only to generate visually plausible structures, but also to produce candidate geometries that can serve as effective starting points for downstream simulation and optimization.
 
+In other words, the generated image is treated as an initial design proposal, and the final performance is verified after geometric reconstruction and simulation in COMSOL.
 
+## Method
 
+The current research direction includes:
 
+- conditional flow matching for structural image generation
+- structured condition encoding instead of generic text encoding
+- geometry reconstruction from pixel outputs
+- simulation validation in COMSOL
+
+## Install
+
+comming soon
+
+## train and eval
+
+comming soon
 
 

@@ -70,7 +70,7 @@ dataset/
 │   └── ...
 └── jsonl/
     └── labels.jsonl
-
+```
 Then run:
 ```bash
 python data_preprocess/pipeline_feature.py
@@ -80,7 +80,7 @@ python data_preprocess/pipeline_feature.py
 
 Train:
 ```bash
-python data_preprocess/pipeline_feature.py
+ python -m scripts.t2i_feature.py
 ```
 
 Eval:

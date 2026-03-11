@@ -1,5 +1,4 @@
 /dataset
-/model
 /wandb
 /__pycache__
 checkpoints/
@@ -13,3 +12,5 @@ scripts/__pycache__/t2i_feature.cpython-38.pyc
 text2img/
 example/
 text-guided/
+__pycache__/
+*.pyc

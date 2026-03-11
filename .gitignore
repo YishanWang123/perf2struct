@@ -8,3 +8,8 @@ grid*.png
 generated_*.zip
 grid_0_199.png
 grid_0_99.png
+exp/
+scripts/__pycache__/t2i_feature.cpython-38.pyc
+text2img/
+example/
+text-guided/

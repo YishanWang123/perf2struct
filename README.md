@@ -1,9 +1,9 @@
 # Perf2Struct
 
-**Performance-Conditioned Structural Generation for Fork-Shaped Beam Design**
+**⚡️Performance-Conditioned Structural Generation for Fork-Shaped Beam Design**
 
 Perf2Struct is a generative inverse design project for fork-shaped beam structures.  
-The goal is to generate structural geometries from target mechanical performance indicators, and then validate the generated results through simulation-oriented engineering post-processing.
+Its goal is to generate structural geometries from target mechanical performance indicators and validate the generated results through simulation-oriented engineering post-processing.
 
 ## Project Overview
 
@@ -28,19 +28,19 @@ The current workflow includes:
 
 ## Target Conditions
 
-The model is designed to condition on mechanical performance indicators such as:
-- drive_frequency
+The model is conditioned on mechanical performance indicators such as:
+
+- drive frequency
 - split
-- parasitic
+- parasitic mode
 - x stiffness
 - nonlinearity
-
 
 ## Project Goal
 
 The main objective is not only to generate visually plausible structures, but also to produce candidate geometries that can serve as effective starting points for downstream simulation and optimization.
 
-In other words, the generated image is treated as an initial design proposal, and the final performance is verified after geometric reconstruction and simulation in COMSOL.
+In other words, the generated image is treated as an initial design proposal, while the final performance is verified after geometric reconstruction and simulation in COMSOL.
 
 ## Method
 
@@ -51,12 +51,44 @@ The current research direction includes:
 - geometry reconstruction from pixel outputs
 - simulation validation in COMSOL
 
-## Install
+## 🛠️ Installation
+```bash
+conda activate -n perf2struct python==3.8.20
+conda activate perf2struct
+pip install -r requirements.txt
+```
 
-comming soon
+## Data Preprocess
+
+You should first generate paired data `(image, text/performance)` using COMSOL and MATLAB, and organize the dataset in the following format:
+
+```text
+dataset/
+├── png/
+│   ├── 0001.png
+│   ├── 0002.png
+│   └── ...
+└── jsonl/
+    └── labels.jsonl
+
+Then run:
+```bash
+python data_preprocess/pipeline_feature.py
+```
 
 ## train and eval
 
-comming soon
+Train:
+```bash
+python data_preprocess/pipeline_feature.py
+```
+
+Eval:
+you should use comsol and matlab to compute the performance of the output images.
+when you get the performance of your output and keep the format like the traing data josnl. 
+then for the metircs of your model, you can compare the differences between the performance of your output and the real label. run:
+```bash
+python metrics.py
+```
 
 

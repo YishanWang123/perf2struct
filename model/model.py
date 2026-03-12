@@ -62,6 +62,77 @@ class UNetModelWithTextEmbedding(UNetModel):
 
 
 class UNetModelWithFiLM(UNetModel):
+    """用 MLP 将 feature 转为 embedding，再以 FiLM (scale+shift) 方式注入 UNet。
+    支持双分支：x_stiffness（第 x_stiffness_idx 维）单独一个 MLP，其余特征一个 MLP，再 concat 后做 FiLM。
+    """
+    def __init__(self, dim, num_channels, num_res_blocks, feature_dim, mlp_hidden=128,
+                 x_stiffness_idx=11, *args, **kwargs):
+        super().__init__(dim, num_channels, num_res_blocks, *args, **kwargs)
+        emb_dim = num_channels * 4
+        self.feature_dim = feature_dim
+        self.x_stiffness_idx = x_stiffness_idx  # 第 12 维（0-based 为 11）
+        other_dim = feature_dim - 1  # 除 x_stiffness 外的维度数
+        # 其余特征：other_dim -> emb_dim
+        self.mlp_other = nn.Sequential(
+            nn.Linear(other_dim, mlp_hidden),
+            nn.SiLU(),
+            nn.Linear(mlp_hidden, mlp_hidden),
+            nn.SiLU(),
+            nn.Linear(mlp_hidden, emb_dim),
+        )
+        # x_stiffness 单独一支：1 -> emb_dim
+        self.mlp_stiffness = nn.Sequential(
+            nn.Linear(1, mlp_hidden),
+            nn.SiLU(),
+            nn.Linear(mlp_hidden, mlp_hidden),
+            nn.SiLU(),
+            nn.Linear(mlp_hidden, emb_dim),
+        )
+        self.mlp_fusion = nn.Sequential(
+            nn.Linear(emb_dim*2, mlp_hidden),
+            nn.SiLU(),
+            nn.Linear(mlp_hidden, emb_dim*2),
+        )
+
+    def _split_features(self, features):
+        """将 [B, feature_dim] 拆成其余特征 [B, feature_dim-1] 与 x_stiffness [B, 1]。"""
+        i = self.x_stiffness_idx
+        other = torch.cat([features[:, :i], features[:, i + 1:]], dim=1)
+        stiffness = features[:, i : i + 1]
+        return other, stiffness
+
+    def forward(self, t, x, features=None):
+        timesteps = t
+        while timesteps.dim() > 1:
+            timesteps = timesteps[:, 0]
+        if timesteps.dim() == 0:
+            timesteps = timesteps.repeat(x.shape[0])
+
+        emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
+
+        if features is not None:
+            features_other, features_stiffness = self._split_features(features)
+            film_other = self.mlp_other(features_other)      # [B, emb_dim]
+            film_stiffness = self.mlp_stiffness(features_stiffness)  # [B, emb_dim]
+            film_pre = torch.cat([film_other, film_stiffness], dim=1)  # [B, emb_dim*2]
+            film = self.mlp_fusion(film_pre)
+            gamma, beta = film.chunk(2, dim=1)
+            emb = emb * (1 + gamma) + beta  # FiLM
+
+        h = x.type(self.dtype)
+        hs = []
+        for module in self.input_blocks:
+            h = module(h, emb)
+            hs.append(h)
+        h = self.middle_block(h, emb)
+        for module in self.output_blocks:
+            h = torch.cat([h, hs.pop()], dim=1)
+            h = module(h, emb)
+        h = h.type(x.dtype)
+        return self.out(h)
+
+
+class UNetModelWithFiLM1714D(UNetModel):
     """用 MLP 将 feature 转为 embedding，再以 FiLM (scale+shift) 方式注入 UNet"""
     def __init__(self, dim, num_channels, num_res_blocks, feature_dim, mlp_hidden=128, *args, **kwargs):
         super().__init__(dim, num_channels, num_res_blocks, *args, **kwargs)

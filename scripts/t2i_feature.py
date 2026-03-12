@@ -3,6 +3,13 @@ CFM 训练脚本：pixel 64x64，使用 structured feature (one-hot + 归一化)
 数据需先运行: python data_preprocess/pipeline_feature.py
 """
 import os
+import sys
+
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_script_dir)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 import random
 import json
 import tempfile
@@ -15,15 +22,15 @@ import torchvision.transforms.functional as F
 import wandb
 import torchvision.utils as vutils
 
-from model.model import UNetModelWithFiLM
+from model.model import UNetModelWithFiLM, UNetModelWithFiLM1714D
 from dataset import CFMFeatureDatasetFromDir
 
 # 路径（JSON+npy 格式，由 pipeline_feature.py 生成，避免 datasets 版本兼容问题）
-DATASET_PATH = "/root/mems_dataset_feature_64"
+DATASET_PATH = "/root/newmemsdata/mems_dataset_feature_64_test1"
 
 # 随机种子
 SEED = 42
-CKPT_DIR = "./checkpoints"
+CKPT_DIR = "./checkpoints_adm_wo_split"
 os.makedirs(CKPT_DIR, exist_ok=True)
 
 
@@ -58,10 +65,19 @@ train_loader = DataLoader(
     num_workers=4, pin_memory=True, persistent_workers=True
 )
 
-model = UNetModelWithFiLM(
+# 模型模式：False=17d/14d 单分支(UNetModelWithFiLM1714D)，True=14d 双分支(x_stiffness 单独 MLP)
+USE_2BRANCH = True
+X_STIFFNESS_IDX = 11  # 仅 USE_2BRANCH 时有效：第 12 维（0-based 索引 11）为 x_stiffness
+
+_model_kw = dict(
     dim=(3, 64, 64), num_channels=64, num_res_blocks=1,
-    feature_dim=FEATURE_DIM, mlp_hidden=128, dropout=0.05, num_heads=4
-).to(device)
+    feature_dim=FEATURE_DIM, mlp_hidden=128, dropout=0.05, num_heads=4,
+)
+if USE_2BRANCH:
+    model = UNetModelWithFiLM(**{**_model_kw, "x_stiffness_idx": X_STIFFNESS_IDX}).to(device)
+else:
+    model = UNetModelWithFiLM1714D(**_model_kw).to(device)
+print(f"Model: {'2-branch (14d, x_stiffness separate)' if USE_2BRANCH else 'single-branch (17d/14d)'}")
 
 optimizer = torch.optim.AdamW(model.parameters())
 n_epochs = 900
@@ -75,10 +91,10 @@ sample_every_n_epochs = 30
 # 若需从原始参数构造 feature，可: from data_preprocess.pipeline_feature import features_to_vector
 SAMPLE_FEATURE_INDICES = [0, 100, 500, 800]
 
-use_wandb = False
+use_wandb = True
 
 if use_wandb:
-    wandb.init(project="cfm-image-generation", name="feature-film-64-ck",
+    wandb.init(project="cfm-image-generation", name="feature-film-adm-wosplit",
                config={"epochs": n_epochs, "batch_size": 64, "feature_dim": FEATURE_DIM})
 else:
     class DummyWandb:
@@ -176,11 +192,15 @@ if __name__ == "__main__":
                 sample_and_log(epoch, feats_t, n_samples_per_feat=1, tag="unseen")
 
                 ckpt_path = os.path.join(CKPT_DIR, f"epoch_{epoch+1:04d}.pt")
-                torch.save({
+                ckpt = {
                     "epoch": epoch + 1,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "scheduler_state_dict": scheduler.state_dict(),
                     "loss": avg_loss,
                     "feature_dim": FEATURE_DIM,
-                }, ckpt_path)
+                    "use_2branch": USE_2BRANCH,
+                }
+                if USE_2BRANCH:
+                    ckpt["x_stiffness_idx"] = X_STIFFNESS_IDX
+                torch.save(ckpt, ckpt_path)

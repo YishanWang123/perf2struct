@@ -31,7 +31,7 @@ The current workflow includes:
 The model is conditioned on mechanical performance indicators such as:
 
 - drive frequency
-- split
+- w/ split + w/o split
 - parasitic mode
 - x stiffness
 - nonlinearity
@@ -73,14 +73,16 @@ dataset/
 ```
 Then run:
 ```bash
-python data_preprocess/pipeline_feature.py
+cd data_preprocess/
+python wo_splt_text.py
+python pipeline_feature.py
 ```
 
 ## train and eval
 
 Train:
 ```bash
- python -m scripts.t2i_feature.py
+ python scripts/t2i_feature.py
 ```
 
 Eval:

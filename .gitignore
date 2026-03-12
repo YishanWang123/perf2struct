@@ -2,6 +2,8 @@
 /wandb
 /__pycache__
 checkpoints/
+checkpoints_wo_split/
+checkpoints_adm_wo_split/
 generated_*/
 grid*.png
 generated_*.zip

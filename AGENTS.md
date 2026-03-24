@@ -1,4 +1,4 @@
-# CODEX.md
+#AGENTS.md
 
 ## Purpose
 
@@ -148,4 +148,3 @@ When updating this file, prefer concise bullets like:
 - Important config knobs:
 - Known broken parts:
 - Next thing to implement:
-

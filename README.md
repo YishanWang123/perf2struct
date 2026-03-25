@@ -53,7 +53,7 @@ The current research direction includes:
 
 ## 🛠️ Installation
 ```bash
-conda activate -n perf2struct python==3.8.20
+conda create -n perf2struct python==3.8.20
 conda activate perf2struct
 pip install -r requirements.txt
 ```

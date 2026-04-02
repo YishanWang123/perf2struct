@@ -11,7 +11,7 @@ Its goal is to generate structural geometries from target mechanical performance
 
 *Figure 1. Overall data pipeline.*
 
-![Model](assets/assets1.jpg)
+![Model](assets/real.jpg)
 
 *Figure 2. Model structure.*
 

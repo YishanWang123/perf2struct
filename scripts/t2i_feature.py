@@ -26,7 +26,7 @@ from model.model import UNetModelWithFiLM, UNetModelWithFiLM1714D
 from dataset import CFMFeatureDatasetFromDir
 
 # 路径（JSON+npy 格式，由 pipeline_feature.py 生成，避免 datasets 版本兼容问题）
-DATASET_PATH = "/root/newmemsdata/mems_dataset_feature_64_test1"
+DATASET_PATH = "/root/memsdata/mems_dataset_feature_64"
 
 # 随机种子
 SEED = 42
@@ -66,7 +66,7 @@ train_loader = DataLoader(
 )
 
 # 模型模式：False=17d/14d 单分支(UNetModelWithFiLM1714D)，True=14d 双分支(x_stiffness 单独 MLP)
-USE_2BRANCH = True
+USE_2BRANCH = False
 X_STIFFNESS_IDX = 11  # 仅 USE_2BRANCH 时有效：第 12 维（0-based 索引 11）为 x_stiffness
 
 _model_kw = dict(
@@ -91,7 +91,7 @@ sample_every_n_epochs = 30
 # 若需从原始参数构造 feature，可: from data_preprocess.pipeline_feature import features_to_vector
 SAMPLE_FEATURE_INDICES = [0, 100, 500, 800]
 
-use_wandb = True
+use_wandb = False
 
 if use_wandb:
     wandb.init(project="cfm-image-generation", name="feature-film-adm-wosplit",

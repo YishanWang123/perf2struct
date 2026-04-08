@@ -72,6 +72,13 @@ dataset/
     └── labels.jsonl
 ```
 Then run:
+original 17D-with split feat
+```bash
+cd data_preprocess/
+python with_splt_text.py
+python pipeline_feature.py
+```
+w/o split feat
 ```bash
 cd data_preprocess/
 python wo_splt_text.py

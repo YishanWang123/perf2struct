@@ -11,10 +11,10 @@ from PIL import Image as PILImage
 # =========================
 # 路径配置
 # =========================
-JSONL_PATH = "/root/memsdata/train/jsonl/structured_output.jsonl"
-STATS_PATH = "/root/memsdata/train/jsonl/stats.json"
-PNG_DIR = "/root/memsdata/train/png"
-SAVE_DIR = "/root/mems_dataset_feature_64"
+JSONL_PATH = "/root/dataset_2/structured_output1.jsonl"
+STATS_PATH = "/root/dataset_2/stats1.json"
+PNG_DIR = "/root/dataset_2/png"
+SAVE_DIR = "/root/dataset_2/features_64_1"
 
 IMG_SIZE = 64
 
